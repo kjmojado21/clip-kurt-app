@@ -8,7 +8,8 @@ import streamlit as st
 
 from src.candidates import analyze_media, make_candidates, probe_duration
 from src.render import render_vertical
-from src.transcribe import transcribe_video
+from src.transcribe import release_model, transcribe_video
+from src.metadata import generate_clip_metadata
 
 ROOT = Path(__file__).parent
 with (ROOT / "config" / "settings.json").open(encoding="utf-8") as handle:
@@ -26,6 +27,7 @@ with st.sidebar:
     max_candidates = st.slider("Maximum candidates", 1, 50, int(DEFAULTS["max_candidates"]))
     transcribe = st.checkbox("Transcribe dialogue locally (Whisper)", True)
     st.caption(f"Local Whisper model: `{DEFAULTS['transcription_model']}` · {DEFAULTS['transcription_device']}")
+    st.caption(f"Local title/hashtag model: `{DEFAULTS['metadata_model']['model']}` via Ollama")
     st.subheader("Score weights")
     weights = {key: st.slider(label, 0, 40, int(DEFAULTS["score_weights"][key]), 1, key=f"weight_{key}")
                for key, label in [("unexpectedness", "Unexpectedness"), ("action_intensity", "Action intensity"),
@@ -106,6 +108,30 @@ if st.session_state.get("candidates"):
             caption_size = st.slider("Caption size", 10, 22, 14, key=f"caption_size_{index}") if captions else 14
             caption_position = st.selectbox("Caption position", ["Bottom", "Top"], key=f"caption_position_{index}") if captions else "Bottom"
             crop_x = st.slider("Horizontal framing (left to right)", 0, 100, 50, key=f"crop_x_{index}", help="Shift the vertical crop toward the player or action you want to keep visible.")
+            metadata_key = f"clip_metadata_{index}"
+            if st.button("Generate title + connected hashtags with local AI", key=f"metadata_button_{index}"):
+                try:
+                    with st.spinner("Generating title and relevant hashtags with local Ollama AI…"):
+                        release_model()
+                        clip_text = " ".join(s["text"] for s in st.session_state.get("segments", []) if s["start"] < end and s["end"] > start)
+                        generated = generate_clip_metadata(
+                            clip_text, candidate.get("signals", {}), start, end,
+                            DEFAULTS["metadata_model"]["base_url"], DEFAULTS["metadata_model"]["model"],
+                            DEFAULTS["metadata_model"]["timeout_seconds"],
+                        )
+                    st.session_state[metadata_key] = {**generated, "start": float(start), "end": float(end)}
+                except Exception as exc:
+                    st.error(f"Title/hashtag generation failed: {exc}. Confirm Ollama is running and `{DEFAULTS['metadata_model']['model']}` is installed.")
+            saved_metadata = st.session_state.get(metadata_key)
+            if saved_metadata and abs(saved_metadata.get("start", -1) - start) < 0.01 and abs(saved_metadata.get("end", -1) - end) < 0.01:
+                st.caption("AI suggestions are grounded in the clip transcript and activity signals; review before posting.")
+                edit_suffix = f"{index}_{start:.2f}_{end:.2f}"
+                edited_title = st.text_input("Suggested title", value=saved_metadata["title"], key=f"title_{edit_suffix}")
+                edited_tags = st.text_input("Suggested hashtags", value=" ".join(saved_metadata["hashtags"]), key=f"tags_{edit_suffix}")
+                metadata_text = f"{edited_title}\n\n{edited_tags}\n"
+                st.download_button("Download title + hashtags", metadata_text, file_name=f"clip_{index + 1}_metadata.txt", mime="text/plain", key=f"metadata_download_{edit_suffix}")
+            elif saved_metadata:
+                st.caption("Timestamps changed; regenerate the title and hashtags for this new range.")
             st.video(source, start_time=max(0, int(start)))
             if st.button("Render vertical 9:16 clip", key=f"render_{index}"):
                 if end <= start:

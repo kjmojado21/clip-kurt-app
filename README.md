@@ -7,6 +7,7 @@ A local-first Streamlit tool for finding possible highlights in gameplay recordi
 - Imports MP4, MOV, MKV, and WebM recordings.
 - Uses FFprobe for duration, then FFmpeg to sample low-resolution grayscale frames and low-rate mono audio in bounded chunks.
 - Optionally transcribes dialogue with the configured local `faster-whisper` model (`base`, CPU, int8 by default).
+- Uses local Ollama (`qwen3:4b` by default) to suggest a grounded title and connected hashtags for a selected clip range; suggestions can be edited and downloaded as a text file.
 - Ranks overlapping candidate windows from visual frame changes, audio energy/spikes, and dialogue excitement cues. Each score includes six 0–100 signal values and explanations.
 - Lets you adjust candidate timestamps and preview the source at those points.
 - Renders 9:16 H.264/AAC MP4 with FFmpeg. Captions are split into short timed phrases, can be moved to the top or bottom, and have an adjustable size. The horizontal crop can be shifted to keep the player/action in frame.
@@ -26,7 +27,7 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-If the virtual environment already exists, activate it and run the final three commands. Open the local URL Streamlit prints (usually `http://localhost:8501`). The first Whisper run may download the model from its model repository; subsequent inference is local. Disable transcription to analyze without downloading/loading Whisper.
+If the virtual environment already exists, activate it and run the final three commands. Open the local URL Streamlit prints (usually `http://localhost:8501`). The first Whisper run may download the model from its model repository; subsequent inference is local. Ollama must be running locally and have the configured model available (`ollama list`). Metadata requests go only to its loopback endpoint. Disable transcription to analyze without downloading/loading Whisper.
 
 ## Sample-video test procedure
 

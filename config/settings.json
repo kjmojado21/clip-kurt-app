@@ -7,6 +7,12 @@
   "transcription_model": "base",
   "transcription_device": "cpu",
   "transcription_compute_type": "int8",
+  "metadata_model": {
+    "provider": "ollama",
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen3:4b",
+    "timeout_seconds": 180
+  },
   "frame_sample_interval_seconds": 2,
   "max_candidates": 20,
   "score_weights": {
