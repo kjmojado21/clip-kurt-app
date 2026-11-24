@@ -1,0 +1,21 @@
+{
+  "clip_duration_default_seconds": 30,
+  "clip_duration_min_seconds": 15,
+  "clip_duration_max_seconds": 45,
+  "output_width": 1080,
+  "output_height": 1920,
+  "transcription_model": "base",
+  "transcription_device": "cpu",
+  "transcription_compute_type": "int8",
+  "frame_sample_interval_seconds": 2,
+  "max_candidates": 20,
+  "score_weights": {
+    "unexpectedness": 20,
+    "action_intensity": 20,
+    "humor_potential": 15,
+    "audio_excitement": 15,
+    "visual_activity": 15,
+    "entertainment": 15
+  },
+  "human_review_required": true
+}
